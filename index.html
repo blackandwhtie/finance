@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker Pro</title>
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div>💰</div>
+            <h2>Finance Tracker Pro</h2>
+            <input type="email" id="login-email" placeholder="Email" autocomplete="username" />
+            <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" />
+            <button class="login-btn" onclick="doLogin()">Login</button>
+            <div class="login-error" id="login-error"></div>
+        </div>
+    </div>
+
+    <!-- MAIN APP (hidden until logged in) -->
+    <div id="app-screen">
+
+    <div class="container">
+        <!-- TOP NAV -->
+        <nav class="top-nav">
+            <div class="top-nav-brand">💰 Finance</div>
+            <div class="nav-tabs">
+                <button class="nav-btn active" onclick="showPage('assets', this)">📊 Assets</button>
+                <button class="nav-btn" onclick="showPage('profit', this)">💹 Profit</button>
+                <button class="nav-btn" onclick="showPage('operations', this)">🧾 Operations</button>
+                <button class="nav-btn" onclick="showPage('history', this)">🗂️ History</button>
+                <button class="nav-btn" onclick="showPage('settings', this)">⚙ Settings</button>
+            </div>
+            <button class="nav-btn-logout-main" onclick="doLogout()">🚪 Logout</button>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+
+            <!-- ASSETS PAGE -->
+            <div id="assets" class="page active">
+                <h2>Assets &amp; Liabilities</h2>
+
+                <!-- Summary Cards -->
+                <div class="summary-cards-top">
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Total Assets</div>
+                        <div class="summary-card-value positive" id="asset-income-total">0</div>
+                    </div>
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Total Liabilities</div>
+                        <div class="summary-card-value negative" id="asset-expense-total">0</div>
+                    </div>
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Net Balance</div>
+                        <div class="summary-card-value" id="asset-net-balance">0</div>
+                        <div id="asset-balance-change" class="balance-change"></div>
+                    </div>
+                </div>
+
+                <!-- ACTION TOOLBAR -->
+                <div class="action-toolbar">
+                    <div class="action-toolbar-left">
+                        <button class="btn-toolbar-clear" onclick="showModal('Clear Asset Data', 'Are you sure you want to clear all current asset/liability entries?', 'clearAssetData')">🗑 Clear Data</button>
+                        <button class="btn-undo-redo" id="assetUndoBtn" onclick="undo()" title="Undo (Ctrl+Z)">↶ Undo</button>
+                        <button class="btn-undo-redo" id="assetRedoBtn" onclick="redo()" title="Redo (Ctrl+Y)">↷ Redo</button>
+                    </div>
+                    <div class="action-toolbar-divider"></div>
+                    <div class="action-toolbar-right">
+                        <select class="add-entry-select" id="asset-entry-type" onchange="updateAssetEntryCategories()" tabindex="1">
+                            <option value="income">Assets (+)</option>
+                            <option value="expense">Liabilities (-)</option>
+                        </select>
+                        <select class="add-entry-select" id="asset-entry-cat" tabindex="2"></select>
+                        <input class="add-entry-input" id="asset-entry-name" type="text" placeholder="Name" onkeydown="handleAssetAddEntryKey(event)" tabindex="3">
+                        <input class="add-entry-amount" id="asset-entry-amount-input" type="number" placeholder="Amount" onkeydown="handleAssetAddEntryKey(event)" tabindex="4">
+                        <button class="btn-add-entry" onclick="submitAssetEntry()" tabindex="5">➕ Add</button>
+                    </div>
+                </div>
+
+                <div class="tables-container">
+                    <!-- ASSETS (INCOME) -->
+                    <div class="table-section">
+                        <div class="table-header">Assets (+)</div>
+                        <div style="padding:14px;">
+                            <div class="cat-cards-in-row" id="asset-cat-cards"></div>
+                        </div>
+                    </div>
+
+                    <!-- LIABILITIES (EXPENSE) -->
+                    <div class="table-section">
+                        <div class="table-header expense">Liabilities (-)</div>
+                        <div style="padding:14px;">
+                            <div class="cat-cards-row" id="liability-cat-cards"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROFIT PAGE -->
+            <div id="profit" class="page">
+                <h2>Profit</h2>
+
+                <!-- Summary Cards -->
+                <div class="summary-cards-top">
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Total Income</div>
+                        <div class="summary-card-value positive" id="profit-income-total">0</div>
+                    </div>
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Total Expenses</div>
+                        <div class="summary-card-value negative" id="profit-expense-total">0</div>
+                    </div>
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Net Profit</div>
+                        <div class="summary-card-value" id="profit-net-total">0</div>
+                        <div id="profit-balance-change" class="balance-change"></div>
+                    </div>
+                </div>
+
+                <!-- ACTION TOOLBAR -->
+                <div class="action-toolbar">
+                    <div class="action-toolbar-left">
+                        <button class="btn-toolbar-summary" onclick="showExpenseDashboard('profit')">📊 Summary</button>
+                        <button class="btn-toolbar-clear" onclick="showModal('Clear Profit Data', 'Are you sure you want to clear all current profit/expense entries?', 'clearProfitData')">🗑 Clear Data</button>
+                        <button class="btn-toolbar-history" onclick="saveMonthlyHistory()">💾 Save History</button>
+                        <button class="btn-undo-redo" id="profitUndoBtn" onclick="undo()" title="Undo (Ctrl+Z)">↶ Undo</button>
+                        <button class="btn-undo-redo" id="profitRedoBtn" onclick="redo()" title="Redo (Ctrl+Y)">↷ Redo</button>
+                    </div>
+                    <div class="action-toolbar-divider"></div>
+                    <div class="action-toolbar-right">
+                        <select class="add-entry-select" id="profit-entry-type" onchange="updateProfitEntryCategories()">
+                            <option value="income">In (+)</option>
+                            <option value="expense">Out (-)</option>
+                        </select>
+                        <select class="add-entry-select" id="profit-entry-cat"></select>
+                        <input class="add-entry-input" id="profit-entry-reason" type="text" placeholder="Reason" onkeydown="handleAddEntryKey(event,'profit')">
+                        <input class="add-entry-amount" id="profit-entry-amount" type="number" placeholder="Amount" onkeydown="handleAddEntryKey(event,'profit')">
+                        <button class="btn-add-entry" onclick="submitAddEntry('profit')">➕ Add</button>
+                    </div>
+                </div>
+
+                <div class="tables-container">
+                    <div class="table-section">
+                        <div class="table-header">In (+)</div>
+                        <div style="padding:14px;">
+                            <div class="cat-cards-in-row" id="profit-in-cat-cards"></div>
+                        </div>
+                    </div>
+                    <div class="table-section">
+                        <div class="table-header expense">Out (-)</div>
+                        <div style="padding:14px;">
+                            <div class="cat-cards-row" id="profit-cat-cards"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OPERATIONS PAGE -->
+            <div id="operations" class="page">
+                <h2>Operations In/Out</h2>
+
+                <div class="summary-cards-top">
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Total In</div>
+                        <div class="summary-card-value positive" id="ops-income-total">0</div>
+                    </div>
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Total Out</div>
+                        <div class="summary-card-value negative" id="ops-expense-total">0</div>
+                    </div>
+                    <div class="summary-card-item">
+                        <div class="summary-card-label">Net Ops</div>
+                        <div class="summary-card-value" id="ops-net-total">0</div>
+                        <div id="ops-balance-change" class="balance-change"></div>
+                    </div>
+                </div>
+
+                <!-- ACTION TOOLBAR -->
+                <div class="action-toolbar">
+                    <div class="action-toolbar-left">
+                        <button class="btn-toolbar-summary" onclick="showExpenseDashboard('operations')">📊 Summary</button>
+                        <button class="btn-toolbar-clear" onclick="showModal('Clear Operations Data', 'Are you sure you want to clear all current operations entries?', 'clearOpsData')">🗑 Clear Data</button>
+                        <button class="btn-toolbar-history" onclick="saveOpsMonthlyHistory()">💾 Save History</button>
+                        <button class="btn-undo-redo" id="opsUndoBtn" onclick="undo()" title="Undo (Ctrl+Z)">↶ Undo</button>
+                        <button class="btn-undo-redo" id="opsRedoBtn" onclick="redo()" title="Redo (Ctrl+Y)">↷ Redo</button>
+                    </div>
+                    <div class="action-toolbar-divider"></div>
+                    <div class="action-toolbar-right">
+                        <select class="add-entry-select" id="ops-entry-type" onchange="updateOpsEntryCategories()">
+                            <option value="income">In (+)</option>
+                            <option value="expense">Out (-)</option>
+                        </select>
+                        <select class="add-entry-select" id="ops-entry-cat"></select>
+                        <input class="add-entry-input" id="ops-entry-reason" type="text" placeholder="Reason" onkeydown="handleAddEntryKey(event,'operations')">
+                        <input class="add-entry-amount" id="ops-entry-amount" type="number" placeholder="Amount" onkeydown="handleAddEntryKey(event,'operations')">
+                        <button class="btn-add-entry" onclick="submitAddEntry('operations')">➕ Add</button>
+                    </div>
+                </div>
+
+                <div class="tables-container">
+                    <div class="table-section">
+                        <div class="table-header">In (+)</div>
+                        <div style="padding:14px;">
+                            <div class="cat-cards-in-row" id="ops-in-cat-cards"></div>
+                        </div>
+                    </div>
+                    <div class="table-section">
+                        <div class="table-header expense">Out (-)</div>
+                        <div style="padding:14px;">
+                            <div class="cat-cards-row" id="ops-cat-cards"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORY PAGE -->
+            <div id="history" class="page">
+                <h2>Monthly History</h2>
+                <div class="history-container">
+                    <div class="history-title">📊 Last 5 Months Summary</div>
+                    <div class="history-type-switch">
+                        <button id="historyProfitBtn" class="history-type-btn active" onclick="setHistoryType('profit')">Profit History</button>
+                        <button id="historyOpsBtn" class="history-type-btn" onclick="setHistoryType('operations')">Operations History</button>
+                    </div>
+                    <div class="history-list" id="historyList"></div>
+                </div>
+            </div>
+
+            <!-- SETTINGS PAGE -->
+            <div id="settings" class="page">
+                <h2>Settings</h2>
+                <div class="backup-section">
+                    <div class="backup-title">📦 Data Backup &amp; Restore</div>
+                    <div class="backup-buttons">
+                        <button class="btn-secondary" onclick="exportData()">📥 Export as JSON</button>
+                        <button class="btn-secondary" onclick="importData()">📤 Import from JSON</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- CONFIRM MODAL -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Confirm Action</h3>
+            <p id="modalMessage">Are you sure you want to proceed?</p>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-modal btn-confirm" onclick="executeConfirmedAction()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORY DETAILS MODAL -->
+    <div id="historyDetailsModal" class="history-details-modal">
+        <div class="history-details-content">
+            <button class="btn-dismiss-change" style="position:absolute; top:15px; right:15px; font-size:16px;" onclick="closeHistoryDetails()">✕</button>
+            <h3 id="detailsTitle" style="color:#d4af37; margin-bottom:15px;">Monthly Details</h3>
+            <div id="detailsBody"></div>
+        </div>
+    </div>
+
+    <!-- EXPENSE SUMMARY DASHBOARD MODAL -->
+    <div id="expDashboardOverlay" class="exp-dashboard-overlay" onclick="closeExpenseDashboard(event)">
+        <div class="exp-dashboard-modal">
+            <div class="exp-dash-header">
+                <div class="exp-dash-title" id="expDashTitle">📊 Expense Summary</div>
+                <button class="exp-dash-close" onclick="document.getElementById('expDashboardOverlay').classList.remove('show')">✕</button>
+            </div>
+            <div class="exp-dash-totals">
+                <div class="exp-dash-total-card">
+                    <div class="exp-dash-total-label">Total Income</div>
+                    <div class="exp-dash-total-value positive" id="expDashIncome">0</div>
+                </div>
+                <div class="exp-dash-total-card">
+                    <div class="exp-dash-total-label">Total Expenses</div>
+                    <div class="exp-dash-total-value negative" id="expDashExpense">0</div>
+                </div>
+                <div class="exp-dash-total-card">
+                    <div class="exp-dash-total-label" id="expDashNetLabel">Net</div>
+                    <div class="exp-dash-total-value gold" id="expDashNet">0</div>
+                </div>
+            </div>
+            <div id="expDashChartSection">
+                <div class="exp-dash-chart-area">
+                    <div class="exp-dash-canvas-wrap">
+                        <canvas id="expDashCanvas" width="320" height="320"></canvas>
+                        <div class="exp-dash-canvas-label">
+                            <span>Expenses</span>
+                            <span id="expDashCanvasTotal">0</span>
+                        </div>
+                    </div>
+                    <div class="exp-dash-legend" id="expDashLegend"></div>
+                </div>
+            </div>
+            <div id="expDashNoData" class="exp-dash-no-data" style="display:none;">No expense data yet.</div>
+        </div>
+    </div>
+
+    <!-- CATEGORY DETAIL POPUP -->
+    <div id="catDetailOverlay" class="cat-popup-overlay" onclick="closeCatPopup(event)">
+        <div class="cat-popup-modal">
+            <div class="cat-popup-header">
+                <div class="cat-popup-title" id="catPopupTitle">Category</div>
+                <button class="cat-popup-close" onclick="document.getElementById('catDetailOverlay').classList.remove('show')">✕</button>
+            </div>
+            <div class="cat-popup-total" id="catPopupTotal"></div>
+                    <table class="cat-popup-table">
+                        <thead>
+                            <tr>
+                                <th class="td-num">#</th>
+                                <th class="td-reason">Reason</th>
+                                <th class="td-date" style="text-align:center">Date</th>
+                                <th class="td-amount">Amount</th>
+                                <th class="td-action">Action</th>
+                            </tr>
+                        </thead>
+                <tbody id="catPopupBody"></tbody>
+            </table>
+            <div id="catPopupEmpty" class="cat-popup-empty" style="display:none;">No entries found.</div>
+        </div>
+    </div>
+
+    <!-- HIDDEN FILE INPUT FOR IMPORT -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+
+    </div><!-- end #app-screen -->
+
+    <!-- External JS -->
+    <script src="script.js"></script>
+
+</body>
+</html>

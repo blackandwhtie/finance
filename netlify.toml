@@ -1,0 +1,61 @@
+# ============================================
+# netlify.toml — Finance Web App (Plain HTML)
+# ============================================
+
+[build]
+  # သင့် index.html ရှိတဲ့ folder ကို ညွှန်ပါ
+  publish = "."         # root ဆိုရင် "." | subfolder ဆိုရင် "dist" or "public"
+  command = ""          # Build command မလိုပါ (Plain HTML)
+
+# ---- SPA / Single Page Routing ----
+# Page refresh လုပ်ရင် 404 မဖြစ်အောင်
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# ---- Security Headers ----
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-XSS-Protection       = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+    Permissions-Policy     = "geolocation=(), microphone=()"
+
+# ---- Cache: Static Assets ----
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ---- Cache: HTML (no cache — always fresh) ----
+[[headers]]
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# ---- Environment ----
+# Netlify Dashboard > Site Settings > Environment Variables မှာ သတ်မှတ်ပါ
+# ဥပမာ: FIREBASE_API_KEY, FIREBASE_PROJECT_ID စသည်
+
+# ---- Deploy Contexts ----
+[context.production]
+  command = ""
+
+[context.deploy-preview]
+  command = ""
+
+[context.branch-deploy]
+  command = ""
