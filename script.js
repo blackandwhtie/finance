@@ -1,12 +1,89 @@
-        // ===== DIRECT ACCESS (No Login) =====
-        let currentUser = { uid: 'local', email: 'local' };
+        // ===== FIREBASE SETUP =====
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc }
+            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-screen').style.display = 'block';
-        window.addEventListener('DOMContentLoaded', init);
+        const firebaseConfig = {
+            apiKey: "AIzaSyApoLQZM7GYgW4TjLRUgBm-HrR5VkP4r3c",
+            authDomain: "finance-tracker-jj.firebaseapp.com",
+            projectId: "finance-tracker-jj",
+            storageBucket: "finance-tracker-jj.firebasestorage.app",
+            messagingSenderId: "361231688691",
+            appId: "1:361231688691:web:21aeb457acf7bfcdc0a886",
+            measurementId: "G-HGEK0XQJ6G"
+        };
 
-        function doLogin() {}
-        function doLogout() {}
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const firestore = getFirestore(firebaseApp);
+
+        let currentUser = null;
+
+        // ===== AUTH STATE =====
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-screen').style.display = 'block';
+                await loadFromFirestore();
+            } else {
+                currentUser = null;
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('app-screen').style.display = 'none';
+            }
+        });
+
+        async function doLogin() {
+            const email    = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errEl    = document.getElementById('login-error');
+            errEl.textContent = '';
+            if (!email || !password) {
+                errEl.textContent = 'Email နှင့် Password ထည့်ပါ။';
+                return;
+            }
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (e) {
+                errEl.textContent = 'Login မအောင်မြင်ပါ။ Email/Password စစ်ဆေးပါ။';
+            }
+        }
+
+        async function doLogout() {
+            await signOut(auth);
+        }
+
+        // ===== FIRESTORE LOAD =====
+        async function loadFromFirestore() {
+            try {
+                const ref  = doc(firestore, 'users', currentUser.uid, 'data', 'main');
+                const snap = await getDoc(ref);
+                if (snap.exists()) {
+                    db = normalizeDbShape(snap.data());
+                } else {
+                    db = JSON.parse(JSON.stringify(DEFAULT_DB));
+                }
+            } catch (e) {
+                console.error('Firestore load error:', e);
+                db = JSON.parse(JSON.stringify(DEFAULT_DB));
+            }
+            db = normalizeDbShape(db);
+            renderAssets();
+            renderProfit();
+            renderOperations();
+            renderHistory();
+            setupAutoSave();
+            updateUndoRedoButtons();
+            updateProfitEntryCategories();
+            updateOpsEntryCategories();
+            updateAssetEntryCategories();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Auth state listener handles init — nothing needed here
+        });
 
         // ===== CATEGORY DEFINITIONS =====
         // OUT categories
@@ -699,21 +776,11 @@
             }
         }
 
-        // ===== INITIALIZATION =====
+        // ===== INITIALIZATION (handled by loadFromFirestore) =====
         function init() {
-            try {
-                const saved = localStorage.getItem('ft_data');
-                if (saved) {
-                    // Load from LocalStorage if exists
-                    db = normalizeDbShape(JSON.parse(saved));
-                } else {
-                    // First time — use hardcoded default data
-                    db = JSON.parse(JSON.stringify(DEFAULT_DB));
-                }
-            } catch (e) {
-                console.error("Failed to load from LocalStorage:", e);
-                db = JSON.parse(JSON.stringify(DEFAULT_DB));
-            }
+            // Data loading is handled by onAuthStateChanged -> loadFromFirestore()
+            // This function kept for compatibility only
+            if (!currentUser) return;
 
             db = normalizeDbShape(db);
 
@@ -781,12 +848,17 @@
         }
 
         function saveAllData(options = {}) {
-            // Save entire db as one JSON to LocalStorage
-            try {
-                localStorage.setItem('ft_data', JSON.stringify(db));
-            } catch (e) {
-                console.error("Failed to save to LocalStorage:", e);
-            }
+            // Save to Firestore (debounced 800ms)
+            if (!currentUser) return;
+            clearTimeout(saveAllData._timer);
+            saveAllData._timer = setTimeout(async () => {
+                try {
+                    const ref = doc(firestore, 'users', currentUser.uid, 'data', 'main');
+                    await setDoc(ref, JSON.parse(JSON.stringify(db)));
+                } catch (e) {
+                    console.error('Firestore save error:', e);
+                }
+            }, 800);
         }
 
         function pushUndo() {
